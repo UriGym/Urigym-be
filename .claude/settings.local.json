@@ -17,7 +17,14 @@
       "Bash(gh auth status:*)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git reset:*)",
+      "Bash(git rm:*)",
+      "Bash(git config:*)",
+      "Bash(git push)",
+      "Bash(curl:*)",
+      "Bash(xargs kill -9)"
     ]
   }
 }
