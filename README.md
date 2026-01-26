@@ -27,5 +27,3 @@
 # PostgreSQL 실행 필요
 ./gradlew bootRun
 ```
-
-서버 주소: http://localhost:8080
