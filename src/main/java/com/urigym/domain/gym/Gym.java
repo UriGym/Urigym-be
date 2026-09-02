@@ -66,6 +66,14 @@ public class Gym {
     @Column(name = "price_max")
     private Integer priceMax;
 
+    @Column(name = "report_count")
+    @Builder.Default
+    private Integer reportCount = 0;
+
+    /** Set by an admin to hide the gym from public listings until this moment passes. */
+    @Column(name = "suspended_until")
+    private LocalDateTime suspendedUntil;
+
     @ElementCollection
     @CollectionTable(name = "gym_tags", joinColumns = @JoinColumn(name = "gym_id"))
     @Column(name = "tag")
@@ -83,4 +91,8 @@ public class Gym {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public boolean isSuspended() {
+        return suspendedUntil != null && suspendedUntil.isAfter(LocalDateTime.now());
+    }
 }

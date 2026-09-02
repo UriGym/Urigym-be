@@ -7,6 +7,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -40,7 +42,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/gyms/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/announcements/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
+                        // Uploaded files are served under randomly generated names
+                        .requestMatchers(HttpMethod.GET, "/files/**").permitAll()
+                        // Role-gated areas — method-level @PreAuthorize enforces the specific role
+                        .requestMatchers("/api/admin/**", "/api/owner/**").authenticated()
                         // Swagger
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
                         // H2 Console (for local development)

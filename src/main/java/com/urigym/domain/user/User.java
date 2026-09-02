@@ -24,13 +24,15 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    /** Null for accounts created purely through social login — see {@link com.urigym.domain.oauth.UserOAuthAccount}. */
     private String password;
 
     @Column(name = "full_name")
     private String fullName;
 
     private String phone;
+
+    private String address;
 
     @Column(name = "avatar_url")
     private String avatarUrl;

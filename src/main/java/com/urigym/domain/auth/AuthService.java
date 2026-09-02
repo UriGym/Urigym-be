@@ -28,6 +28,7 @@ public class AuthService {
                 .password(request.getPassword())
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
+                .address(request.getAddress())
                 .build();
 
         User savedUser = userService.createUser(user);
@@ -38,6 +39,10 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         User user = userService.getUserByEmail(request.getEmail());
+
+        if (user.getPassword() == null) {
+            throw new IllegalArgumentException("소셜 로그인으로 가입된 계정입니다. 카카오 또는 네이버로 로그인해주세요.");
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BadCredentialsException("Invalid email or password");

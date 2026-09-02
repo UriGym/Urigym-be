@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -19,8 +20,10 @@ public class UserResponse {
     private String email;
     private String fullName;
     private String phone;
+    private String address;
     private String avatarUrl;
     private AppRole role;
+    private LocalDateTime createdAt;
 
     public static UserResponse from(User user) {
         return UserResponse.builder()
@@ -28,8 +31,10 @@ public class UserResponse {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
+                .address(user.getAddress())
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole())
+                .createdAt(user.getCreatedAt())
                 .build();
     }
 }

@@ -2,6 +2,7 @@ package com.urigym.domain.gym;
 
 import com.urigym.common.response.ApiResponse;
 import com.urigym.domain.gym.entity.GymResponse;
+import com.urigym.domain.ranking.GymRankingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class GymController {
 
     private final GymService gymService;
+    private final GymRankingService gymRankingService;
 
     @GetMapping
     @Operation(summary = "체육관 목록 조회", description = "전체 체육관 목록을 페이징하여 조회합니다.")
@@ -30,6 +32,18 @@ public class GymController {
     ) {
         Page<GymResponse> gyms = gymService.getAllGyms(pageable)
                 .map(GymResponse::from);
+        return ResponseEntity.ok(ApiResponse.success(gyms));
+    }
+
+    @GetMapping("/ranked")
+    @Operation(summary = "AI 추천 랭킹 조회", description = "리뷰 품질, 인기도, 가격 경쟁력, 신고 이력을 종합해 상위 체육관을 반환합니다.")
+    public ResponseEntity<ApiResponse<List<GymResponse>>> getRankedGyms(
+            @RequestParam(defaultValue = "5") int limit
+    ) {
+        List<GymResponse> gyms = gymRankingService.getRankedGyms(limit)
+                .stream()
+                .map(ranked -> GymResponse.ranked(ranked.gym(), ranked.score()))
+                .toList();
         return ResponseEntity.ok(ApiResponse.success(gyms));
     }
 

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,8 +33,21 @@ public class GymResponse {
     private Integer priceMin;
     private Integer priceMax;
     private List<String> tags;
+    private Integer reportCount;
+    private LocalDateTime suspendedUntil;
+    private UUID ownerId;
+    /** Only populated by the ranked listing. */
+    private Double rankScore;
 
     public static GymResponse from(Gym gym) {
+        return builderOf(gym).build();
+    }
+
+    public static GymResponse ranked(Gym gym, double rankScore) {
+        return builderOf(gym).rankScore(rankScore).build();
+    }
+
+    private static GymResponseBuilder builderOf(Gym gym) {
         return GymResponse.builder()
                 .id(gym.getId())
                 .name(gym.getName())
@@ -51,6 +65,8 @@ public class GymResponse {
                 .priceMin(gym.getPriceMin())
                 .priceMax(gym.getPriceMax())
                 .tags(gym.getTags())
-                .build();
+                .reportCount(gym.getReportCount())
+                .suspendedUntil(gym.getSuspendedUntil())
+                .ownerId(gym.getOwner() != null ? gym.getOwner().getId() : null);
     }
 }

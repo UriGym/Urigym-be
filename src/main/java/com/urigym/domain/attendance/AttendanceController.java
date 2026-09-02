@@ -72,8 +72,9 @@ public class AttendanceController {
         Attendance attendance = attendanceService.checkIn(
                 request.getGymId(),
                 user,
-                request.getCheckInMethod()
+                request.getCheckInMethod(),
+                request.getPhoneNumber()
         );
-        return ResponseEntity.ok(ApiResponse.success("Check-in successful", AttendanceResponse.from(attendance)));
+        return ResponseEntity.ok(ApiResponse.success("출석 체크가 완료되었습니다.", AttendanceResponse.from(attendance)));
     }
 }

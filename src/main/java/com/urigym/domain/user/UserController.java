@@ -2,6 +2,7 @@ package com.urigym.domain.user;
 
 import com.urigym.common.response.ApiResponse;
 import com.urigym.domain.user.entity.UserResponse;
+import com.urigym.domain.user.entity.UserUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,9 +28,9 @@ public class UserController {
     @Operation(summary = "내 정보 수정", description = "로그인한 사용자의 정보를 수정합니다.")
     public ResponseEntity<ApiResponse<UserResponse>> updateMyInfo(
             @AuthenticationPrincipal User user,
-            @RequestBody User userDetails
+            @RequestBody UserUpdateRequest request
     ) {
-        User updatedUser = userService.updateUser(user.getId(), userDetails);
+        User updatedUser = userService.updateUser(user.getId(), request);
         return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", UserResponse.from(updatedUser)));
     }
 }

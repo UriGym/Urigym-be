@@ -1,12 +1,18 @@
 package com.urigym.domain.gym;
 
 import com.urigym.common.exception.ResourceNotFoundException;
+import com.urigym.domain.gym.entity.GymOwnerRequest;
+import com.urigym.domain.user.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,6 +24,15 @@ public class GymService {
     private final GymRepository gymRepository;
 
     public Page<Gym> getAllGyms(Pageable pageable) {
+        return gymRepository.findAll(visible(), pageable);
+    }
+
+    public List<Gym> getAllVisibleGyms() {
+        return gymRepository.findAll(visible());
+    }
+
+    /** Admin view — includes gyms currently suspended from public listings. */
+    public Page<Gym> getAllGymsIncludingSuspended(Pageable pageable) {
         return gymRepository.findAll(pageable);
     }
 
@@ -27,15 +42,20 @@ public class GymService {
     }
 
     public Page<Gym> getGymsByCategory(String category, Pageable pageable) {
-        return gymRepository.findByCategory(category, pageable);
+        return gymRepository.findAll(visible().and(GymSpecifications.hasCategory(category)), pageable);
     }
 
     public Page<Gym> searchGyms(String keyword, Pageable pageable) {
-        return gymRepository.searchByKeyword(keyword, pageable);
+        return gymRepository.findAll(visible().and(GymSpecifications.matchesKeyword(keyword)), pageable);
     }
 
     public List<Gym> getGymsByLocation(Double minLat, Double maxLat, Double minLng, Double maxLng) {
-        return gymRepository.findByLocationBounds(minLat, maxLat, minLng, maxLng);
+        return gymRepository.findAll(
+                visible().and(GymSpecifications.withinBounds(minLat, maxLat, minLng, maxLng)));
+    }
+
+    private Specification<Gym> visible() {
+        return GymSpecifications.visible(LocalDateTime.now());
     }
 
     public List<Gym> getGymsByOwner(UUID ownerId) {
@@ -43,34 +63,39 @@ public class GymService {
     }
 
     @Transactional
-    public Gym createGym(Gym gym) {
+    public Gym createGym(User owner, GymOwnerRequest request) {
+        Gym gym = Gym.builder().owner(owner).build();
+        apply(gym, request);
         return gymRepository.save(gym);
     }
 
     @Transactional
-    public Gym updateGym(UUID id, Gym gymDetails) {
-        Gym gym = getGymById(id);
-
-        gym.setName(gymDetails.getName());
-        gym.setCategory(gymDetails.getCategory());
-        gym.setAddress(gymDetails.getAddress());
-        gym.setDescription(gymDetails.getDescription());
-        gym.setPhone(gymDetails.getPhone());
-        gym.setImageUrl(gymDetails.getImageUrl());
-        gym.setIsOpen(gymDetails.getIsOpen());
-        gym.setLat(gymDetails.getLat());
-        gym.setLng(gymDetails.getLng());
-        gym.setPriceMin(gymDetails.getPriceMin());
-        gym.setPriceMax(gymDetails.getPriceMax());
-        gym.setTags(gymDetails.getTags());
-
+    public Gym updateGym(UUID id, UUID ownerId, GymOwnerRequest request) {
+        Gym gym = getOwnedGym(id, ownerId);
+        apply(gym, request);
         return gymRepository.save(gym);
     }
 
     @Transactional
-    public void deleteGym(UUID id) {
-        Gym gym = getGymById(id);
-        gymRepository.delete(gym);
+    public void deleteGym(UUID id, UUID ownerId) {
+        gymRepository.delete(getOwnedGym(id, ownerId));
+    }
+
+    private void apply(Gym gym, GymOwnerRequest request) {
+        gym.setName(request.getName());
+        gym.setCategory(request.getCategory());
+        gym.setAddress(request.getAddress());
+        gym.setDescription(request.getDescription());
+        gym.setPhone(request.getPhone());
+        gym.setImageUrl(request.getImageUrl());
+        gym.setLat(request.getLat());
+        gym.setLng(request.getLng());
+        gym.setPriceMin(request.getPriceMin());
+        gym.setPriceMax(request.getPriceMax());
+        gym.setTags(request.getTags() != null ? request.getTags() : new ArrayList<>());
+        if (request.getIsOpen() != null) {
+            gym.setIsOpen(request.getIsOpen());
+        }
     }
 
     @Transactional
@@ -79,5 +104,37 @@ public class GymService {
         gym.setReviewCount(reviewCount);
         gym.setRating(java.math.BigDecimal.valueOf(avgRating));
         gymRepository.save(gym);
+    }
+
+    @Transactional
+    public void incrementReportCount(UUID gymId) {
+        Gym gym = getGymById(gymId);
+        gym.setReportCount(gym.getReportCount() + 1);
+        gymRepository.save(gym);
+    }
+
+    @Transactional
+    public Gym suspend(UUID gymId, int days) {
+        if (days < 1) {
+            throw new IllegalArgumentException("정지 기간은 1일 이상이어야 합니다.");
+        }
+        Gym gym = getGymById(gymId);
+        gym.setSuspendedUntil(LocalDateTime.now().plusDays(days));
+        return gymRepository.save(gym);
+    }
+
+    @Transactional
+    public Gym unsuspend(UUID gymId) {
+        Gym gym = getGymById(gymId);
+        gym.setSuspendedUntil(null);
+        return gymRepository.save(gym);
+    }
+
+    public Gym getOwnedGym(UUID gymId, UUID ownerId) {
+        Gym gym = getGymById(gymId);
+        if (!gym.getOwner().getId().equals(ownerId)) {
+            throw new AccessDeniedException("본인이 등록한 체육관만 관리할 수 있습니다.");
+        }
+        return gym;
     }
 }

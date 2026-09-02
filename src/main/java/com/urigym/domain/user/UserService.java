@@ -2,7 +2,10 @@ package com.urigym.domain.user;
 
 import com.urigym.common.exception.ResourceNotFoundException;
 import com.urigym.common.exception.DuplicateResourceException;
+import com.urigym.domain.user.entity.UserUpdateRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,14 +40,34 @@ public class UserService {
     }
 
     @Transactional
-    public User updateUser(UUID id, User userDetails) {
+    public User updateUser(UUID id, UserUpdateRequest request) {
         User user = getUserById(id);
 
-        user.setFullName(userDetails.getFullName());
-        user.setPhone(userDetails.getPhone());
-        user.setAvatarUrl(userDetails.getAvatarUrl());
+        user.setFullName(request.getFullName());
+        user.setPhone(request.getPhone());
+        user.setAddress(request.getAddress());
 
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteUser(UUID id) {
+        userRepository.delete(getUserById(id));
+    }
+
+    @Transactional
+    public User changeRole(UUID id, AppRole role) {
+        User user = getUserById(id);
+        user.setRole(role);
+        return userRepository.save(user);
+    }
+
+    public Page<User> getUsers(String keyword, Pageable pageable) {
+        if (keyword == null || keyword.isBlank()) {
+            return userRepository.findAll(pageable);
+        }
+        return userRepository.findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCaseOrPhoneContaining(
+                keyword, keyword, keyword, pageable);
     }
 
     @Transactional

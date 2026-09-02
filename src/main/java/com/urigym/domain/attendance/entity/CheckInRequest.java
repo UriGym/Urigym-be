@@ -1,5 +1,6 @@
 package com.urigym.domain.attendance.entity;
 
+import com.urigym.domain.attendance.CheckInMethod;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,8 +13,12 @@ import java.util.UUID;
 @AllArgsConstructor
 public class CheckInRequest {
 
-    @NotNull(message = "Gym ID is required")
+    @NotNull(message = "체육관을 선택해주세요.")
     private UUID gymId;
 
-    private String checkInMethod;
+    @NotNull(message = "출석 방식을 선택해주세요.")
+    private CheckInMethod checkInMethod;
+
+    /** Required when checkInMethod is PHONE. */
+    private String phoneNumber;
 }
