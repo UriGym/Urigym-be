@@ -36,6 +36,12 @@ app:
 toss:
   secret-key: ${TOSS_SECRET_KEY:test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R}
 
+# 카카오 로컬 API(장소 검색) — 전국 체육관 임포트용 서버 키. JS 지도 키와 다름, 카카오
+# 디벨로퍼스 앱 설정의 "REST API 키".
+kakao:
+  local:
+    rest-api-key: ${KAKAO_REST_API_KEY:}
+
 jwt:
   secret: urigym-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
   expiration: 86400000  # 24 hours in milliseconds

@@ -76,6 +76,21 @@ public class GymController {
         return ResponseEntity.ok(ApiResponse.success(gyms));
     }
 
+    @GetMapping("/nearby")
+    @Operation(summary = "내 주변 체육관 조회", description = "현재 위치 기준 반경(km) 내 체육관을 가까운 순으로 조회합니다.")
+    public ResponseEntity<ApiResponse<List<GymResponse>>> getNearbyGyms(
+            @RequestParam Double lat,
+            @RequestParam Double lng,
+            @RequestParam(defaultValue = "2") Double radiusKm,
+            @RequestParam(defaultValue = "100") int limit
+    ) {
+        List<GymResponse> gyms = gymService.getNearbyGyms(lat, lng, radiusKm, limit)
+                .stream()
+                .map(GymResponse::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(gyms));
+    }
+
     @GetMapping("/location")
     @Operation(summary = "위치 기반 체육관 조회", description = "특정 위치 범위 내의 체육관을 조회합니다.")
     public ResponseEntity<ApiResponse<List<GymResponse>>> getGymsByLocation(

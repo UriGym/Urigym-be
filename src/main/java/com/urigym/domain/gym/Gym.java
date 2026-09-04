@@ -3,6 +3,7 @@ package com.urigym.domain.gym;
 import com.urigym.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -84,9 +85,20 @@ public class Gym {
     @Builder.Default
     private List<String> tags = new ArrayList<>();
 
+    /** Null for gyms imported from an external source (e.g. Kakao) that no owner has claimed yet. */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "owner_id")
     private User owner;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false)
+    @ColumnDefault("'USER'")
+    @Builder.Default
+    private GymSource source = GymSource.USER;
+
+    /** Kakao Local's place id, for import dedup. Null for gyms owners registered themselves. */
+    @Column(name = "kakao_place_id", unique = true)
+    private String kakaoPlaceId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
