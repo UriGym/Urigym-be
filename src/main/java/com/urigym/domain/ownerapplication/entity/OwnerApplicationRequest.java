@@ -13,8 +13,8 @@ public class OwnerApplicationRequest {
     @NotBlank(message = "사업자등록증 이미지가 필요합니다.")
     private String businessRegImageUrl;
 
-    @NotBlank(message = "관장 자격증 이미지가 필요합니다.")
     private String licenseImageUrl;
 
+    @NotBlank(message = "사업자등록번호가 필요합니다.")
     private String businessNumber;
 }

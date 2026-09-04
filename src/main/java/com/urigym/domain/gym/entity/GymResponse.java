@@ -30,6 +30,7 @@ public class GymResponse {
     private Integer memberCount;
     private BigDecimal rating;
     private Integer reviewCount;
+    private Integer favoriteCount;
     private Integer priceMin;
     private Integer priceMax;
     private List<String> tags;
@@ -62,6 +63,7 @@ public class GymResponse {
                 .memberCount(gym.getMemberCount())
                 .rating(gym.getRating())
                 .reviewCount(gym.getReviewCount())
+                .favoriteCount(gym.getFavoriteCount())
                 .priceMin(gym.getPriceMin())
                 .priceMax(gym.getPriceMax())
                 .tags(gym.getTags())

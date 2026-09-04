@@ -40,9 +40,9 @@ dependencies {
     // Swagger/OpenAPI
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.4.0'
 
-    // Lombok
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    // Lombok — pinned above Spring Boot BOM's 1.18.36, which throws ExceptionInInitializerError on JDK 25
+    compileOnly 'org.projectlombok:lombok:1.18.48'
+    annotationProcessor 'org.projectlombok:lombok:1.18.48'
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

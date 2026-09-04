@@ -54,6 +54,19 @@ public class GymService {
                 visible().and(GymSpecifications.withinBounds(minLat, maxLat, minLng, maxLng)));
     }
 
+    private static final double KM_PER_DEGREE_LAT = 111.0;
+
+    /** Nearest-first gyms within {@code radiusKm} of (lat, lng). */
+    public List<Gym> getNearbyGyms(double lat, double lng, double radiusKm, int limit) {
+        double latDelta = radiusKm / KM_PER_DEGREE_LAT;
+        double lngDelta = radiusKm / (KM_PER_DEGREE_LAT * Math.cos(Math.toRadians(lat)));
+        return gymRepository.findNearby(
+                lat, lng, radiusKm,
+                lat - latDelta, lat + latDelta,
+                lng - lngDelta, lng + lngDelta,
+                LocalDateTime.now(), limit);
+    }
+
     private Specification<Gym> visible() {
         return GymSpecifications.visible(LocalDateTime.now());
     }
@@ -107,6 +120,13 @@ public class GymService {
     }
 
     @Transactional
+    public void updateFavoriteCount(UUID gymId, long favoriteCount) {
+        Gym gym = getGymById(gymId);
+        gym.setFavoriteCount((int) favoriteCount);
+        gymRepository.save(gym);
+    }
+
+    @Transactional
     public void incrementReportCount(UUID gymId) {
         Gym gym = getGymById(gymId);
         gym.setReportCount(gym.getReportCount() + 1);
@@ -136,5 +156,37 @@ public class GymService {
             throw new AccessDeniedException("본인이 등록한 체육관만 관리할 수 있습니다.");
         }
         return gym;
+    }
+
+    /**
+     * Inserts a Kakao-sourced gym, unclaimed (no owner), unless one with the same
+     * {@code kakaoPlaceId} already exists. The unique constraint on that column is the
+     * real guard against duplicates — the findBy check just avoids a wasted round trip
+     * for the common case, since the import runs several cells concurrently.
+     *
+     * @return true if a new gym was created, false if it already existed
+     */
+    @Transactional
+    public boolean upsertFromKakao(String kakaoPlaceId, String name, String category, String address,
+                                    String phone, Double lat, Double lng) {
+        if (gymRepository.findByKakaoPlaceId(kakaoPlaceId).isPresent()) {
+            return false;
+        }
+        Gym gym = Gym.builder()
+                .name(name)
+                .category(category)
+                .address(address)
+                .phone(phone)
+                .lat(lat)
+                .lng(lng)
+                .source(GymSource.KAKAO)
+                .kakaoPlaceId(kakaoPlaceId)
+                .build();
+        try {
+            gymRepository.save(gym);
+            return true;
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            return false;
+        }
     }
 }

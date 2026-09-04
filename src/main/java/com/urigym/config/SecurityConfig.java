@@ -39,6 +39,8 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/", "/error").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Favorite endpoints need the authenticated user, not just gym visibility
+                        .requestMatchers(HttpMethod.GET, "/api/gyms/*/favorite").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/gyms/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/announcements/**").permitAll()
