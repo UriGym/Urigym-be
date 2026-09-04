@@ -32,10 +32,22 @@ public class User {
 
     private String phone;
 
+    @Column(name = "phone_verified", nullable = false)
+    @Builder.Default
+    private Boolean phoneVerified = false;
+
     private String address;
 
     @Column(name = "avatar_url")
     private String avatarUrl;
+
+    @Column(name = "notify_announcements", nullable = false)
+    @Builder.Default
+    private Boolean notifyAnnouncements = true;
+
+    @Column(name = "notify_messages", nullable = false)
+    @Builder.Default
+    private Boolean notifyMessages = true;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
