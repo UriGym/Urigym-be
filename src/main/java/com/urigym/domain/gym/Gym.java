@@ -60,6 +60,10 @@ public class Gym {
     @Builder.Default
     private Integer reviewCount = 0;
 
+    @Column(name = "favorite_count")
+    @Builder.Default
+    private Integer favoriteCount = 0;
+
     @Column(name = "price_min")
     private Integer priceMin;
 

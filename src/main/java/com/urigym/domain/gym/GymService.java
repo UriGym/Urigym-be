@@ -107,6 +107,13 @@ public class GymService {
     }
 
     @Transactional
+    public void updateFavoriteCount(UUID gymId, long favoriteCount) {
+        Gym gym = getGymById(gymId);
+        gym.setFavoriteCount((int) favoriteCount);
+        gymRepository.save(gym);
+    }
+
+    @Transactional
     public void incrementReportCount(UUID gymId) {
         Gym gym = getGymById(gymId);
         gym.setReportCount(gym.getReportCount() + 1);

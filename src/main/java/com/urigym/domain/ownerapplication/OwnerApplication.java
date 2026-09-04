@@ -28,10 +28,10 @@ public class OwnerApplication {
     @Column(name = "business_reg_image_url", nullable = false)
     private String businessRegImageUrl;
 
-    @Column(name = "license_image_url", nullable = false)
+    @Column(name = "license_image_url")
     private String licenseImageUrl;
 
-    @Column(name = "business_number")
+    @Column(name = "business_number", nullable = false)
     private String businessNumber;
 
     @Enumerated(EnumType.STRING)
