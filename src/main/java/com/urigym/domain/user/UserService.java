@@ -39,13 +39,21 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    /** Only sets fields present in the request — lets the profile form and the
+     *  notification-settings form share this endpoint without clobbering each other. */
     @Transactional
     public User updateUser(UUID id, UserUpdateRequest request) {
         User user = getUserById(id);
 
-        user.setFullName(request.getFullName());
-        user.setPhone(request.getPhone());
-        user.setAddress(request.getAddress());
+        if (request.getFullName() != null) user.setFullName(request.getFullName());
+        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone())) {
+            // Editing the number outside the SMS-verify flow means it's unverified again.
+            user.setPhone(request.getPhone());
+            user.setPhoneVerified(false);
+        }
+        if (request.getAddress() != null) user.setAddress(request.getAddress());
+        if (request.getNotifyAnnouncements() != null) user.setNotifyAnnouncements(request.getNotifyAnnouncements());
+        if (request.getNotifyMessages() != null) user.setNotifyMessages(request.getNotifyMessages());
 
         return userRepository.save(user);
     }
@@ -75,5 +83,19 @@ public class UserService {
         User user = getUserById(id);
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void changePassword(UUID id, String currentPassword, String newPassword) {
+        User user = getUserById(id);
+
+        if (user.getPassword() == null) {
+            throw new IllegalArgumentException("소셜 로그인 계정은 비밀번호를 변경할 수 없습니다.");
+        }
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        updatePassword(id, newPassword);
     }
 }

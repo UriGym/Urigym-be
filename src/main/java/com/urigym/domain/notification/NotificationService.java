@@ -40,8 +40,13 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
+    /** SYSTEM notifications (approvals etc.) are never user-silenceable — only
+     *  ANNOUNCEMENT and MESSAGE respect the recipient's notification settings. */
     @Transactional
     public void notify(User user, NotificationType type, String title, String body, UUID relatedGymId) {
+        if (!wantsNotification(user, type)) {
+            return;
+        }
         notificationRepository.save(Notification.builder()
                 .user(user)
                 .type(type)
@@ -54,6 +59,7 @@ public class NotificationService {
     @Transactional
     public int notifyAll(Collection<User> users, NotificationType type, String title, String body, UUID relatedGymId) {
         List<Notification> notifications = users.stream()
+                .filter(user -> wantsNotification(user, type))
                 .map(user -> Notification.builder()
                         .user(user)
                         .type(type)
@@ -65,5 +71,13 @@ public class NotificationService {
 
         notificationRepository.saveAll(notifications);
         return notifications.size();
+    }
+
+    private boolean wantsNotification(User user, NotificationType type) {
+        return switch (type) {
+            case ANNOUNCEMENT -> Boolean.TRUE.equals(user.getNotifyAnnouncements());
+            case MESSAGE -> Boolean.TRUE.equals(user.getNotifyMessages());
+            case SYSTEM -> true;
+        };
     }
 }
