@@ -1,0 +1,164 @@
+package com.urigym.domain.member;
+
+import com.urigym.common.exception.DuplicateResourceException;
+import com.urigym.common.exception.ResourceNotFoundException;
+import com.urigym.domain.attendance.Attendance;
+import com.urigym.domain.attendance.AttendanceRepository;
+import com.urigym.domain.gym.Gym;
+import com.urigym.domain.gym.entity.GymResponse;
+import com.urigym.domain.member.entity.GymMemberRequest;
+import com.urigym.domain.member.entity.GymMemberResponse;
+import com.urigym.domain.member.entity.MyMembershipResponse;
+import com.urigym.domain.user.User;
+import com.urigym.domain.user.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class GymMemberService {
+
+    private final GymMemberRepository gymMemberRepository;
+    private final AttendanceRepository attendanceRepository;
+    private final UserService userService;
+
+    public List<GymMemberResponse> getMembersWithStats(UUID gymId) {
+        Map<UUID, LocalDateTime> lastCheckIns = new HashMap<>();
+        gymMemberRepository.findLastCheckInByGymId(gymId)
+                .forEach(row -> lastCheckIns.put((UUID) row[0], (LocalDateTime) row[1]));
+
+        Map<UUID, Long> attendanceCounts = new HashMap<>();
+        gymMemberRepository.findAttendanceCountByGymId(gymId)
+                .forEach(row -> attendanceCounts.put((UUID) row[0], (Long) row[1]));
+
+        return gymMemberRepository.findByGymId(gymId).stream()
+                .map(member -> GymMemberResponse.withStats(
+                        member,
+                        lastCheckIns.get(member.getId()),
+                        attendanceCounts.getOrDefault(member.getId(), 0L)
+                ))
+                .sorted(Comparator.comparing(GymMemberResponse::getJoinedAt).reversed())
+                .toList();
+    }
+
+    /** Members who have not checked in for at least {@code days}, never-attended included. */
+    public List<GymMemberResponse> getAbsentMembers(UUID gymId, int days) {
+        LocalDateTime threshold = LocalDateTime.now().minusDays(days);
+
+        return getMembersWithStats(gymId).stream()
+                .filter(member -> member.getLastCheckInTime() == null
+                        || member.getLastCheckInTime().isBefore(threshold))
+                .sorted(Comparator.comparing(
+                        GymMemberResponse::getLastCheckInTime,
+                        Comparator.nullsFirst(Comparator.naturalOrder())
+                ))
+                .toList();
+    }
+
+    public List<GymMember> getMembersByIds(List<UUID> ids) {
+        return gymMemberRepository.findByIdIn(ids);
+    }
+
+    public List<GymMember> getMembers(UUID gymId) {
+        return gymMemberRepository.findByGymId(gymId);
+    }
+
+    /**
+     * A user typically belongs to a handful of gyms, so per-membership attendance
+     * queries (2 per gym) are fine here — unlike {@link #getMembersWithStats}, which
+     * batches into 2 queries total because a gym can have 100+ members and per-member
+     * queries there would be a real N+1.
+     */
+    public List<MyMembershipResponse> getMyMemberships(UUID userId) {
+        return gymMemberRepository.findByUserId(userId).stream()
+                .map(member -> MyMembershipResponse.builder()
+                        .id(member.getId())
+                        .gym(GymResponse.from(member.getGym()))
+                        .status(member.getStatus())
+                        .joinedAt(member.getJoinedAt())
+                        .expiresAt(member.getExpiresAt())
+                        .lastCheckInTime(attendanceRepository
+                                .findTopByGymIdAndUserIdOrderByCheckInTimeDesc(member.getGym().getId(), userId)
+                                .map(Attendance::getCheckInTime)
+                                .orElse(null))
+                        .attendanceCount(attendanceRepository.countByGymIdAndUserId(member.getGym().getId(), userId))
+                        .build())
+                .sorted(Comparator.comparing(MyMembershipResponse::getJoinedAt).reversed())
+                .toList();
+    }
+
+    /**
+     * Hard-deletes the membership row, same as the owner-side removeMember. Safe to do:
+     * Attendance rows reference user+gym directly, not GymMember, so past visit history
+     * survives cancellation — only future check-ins are blocked (checkIn requires an
+     * active GymMember row).
+     */
+    @Transactional
+    public void cancelOwnMembership(UUID memberId, UUID userId) {
+        GymMember member = getMemberById(memberId);
+        if (!member.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("본인의 회원권만 해지할 수 있습니다.");
+        }
+
+        Gym gym = member.getGym();
+        gymMemberRepository.delete(member);
+        gym.setMemberCount((int) gymMemberRepository.countByGymId(gym.getId()));
+    }
+
+    public GymMember getMemberById(UUID id) {
+        return gymMemberRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Gym member not found with id: " + id));
+    }
+
+    @Transactional
+    public GymMember addMember(Gym gym, GymMemberRequest request) {
+        User user = userService.getUserByEmail(request.getUserEmail());
+
+        if (gymMemberRepository.existsByGymIdAndUserId(gym.getId(), user.getId())) {
+            throw new DuplicateResourceException("이미 등록된 관원입니다.");
+        }
+
+        GymMember member = gymMemberRepository.save(GymMember.builder()
+                .gym(gym)
+                .user(user)
+                .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
+                .expiresAt(request.getExpiresAt())
+                .build());
+
+        gym.setMemberCount((int) gymMemberRepository.countByGymId(gym.getId()));
+        return member;
+    }
+
+    @Transactional
+    public GymMember updateMember(UUID memberId, UUID gymId, GymMemberRequest request) {
+        GymMember member = getMemberOfGym(memberId, gymId);
+        if (request.getStatus() != null) {
+            member.setStatus(request.getStatus());
+        }
+        member.setExpiresAt(request.getExpiresAt());
+        return gymMemberRepository.save(member);
+    }
+
+    @Transactional
+    public void removeMember(UUID memberId, UUID gymId, Gym gym) {
+        gymMemberRepository.delete(getMemberOfGym(memberId, gymId));
+        gym.setMemberCount((int) gymMemberRepository.countByGymId(gymId));
+    }
+
+    private GymMember getMemberOfGym(UUID memberId, UUID gymId) {
+        GymMember member = getMemberById(memberId);
+        if (!member.getGym().getId().equals(gymId)) {
+            throw new IllegalArgumentException("해당 체육관의 관원이 아닙니다.");
+        }
+        return member;
+    }
+}
