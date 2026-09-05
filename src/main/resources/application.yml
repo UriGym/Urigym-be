@@ -43,7 +43,7 @@ kakao:
     rest-api-key: ${KAKAO_REST_API_KEY:}
 
 jwt:
-  secret: urigym-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
+  secret: ${JWT_SECRET:urigym-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256}
   expiration: 86400000  # 24 hours in milliseconds
 
 springdoc:

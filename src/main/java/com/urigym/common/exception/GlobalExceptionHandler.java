@@ -1,6 +1,9 @@
 package com.urigym.common.exception;
 
 import com.urigym.common.response.ApiResponse;
+import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -14,6 +17,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -67,6 +71,31 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Invalid email or password"));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        // Root cause is a raw Postgres/JDBC message (constraint names, column names) —
+        // useful for us, not for the client, so it stays in the log only.
+        log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error("리뷰/찜이 있는 체육관은 삭제할 수 없습니다. 먼저 정지(suspend) 처리하세요."));
+    }
+
+    /**
+     * Thrown by the AOP proxy Spring Boot creates for {@code @Validated} controllers when a
+     * {@code @RequestParam} fails a Bean Validation constraint (e.g. radiusKm/limit caps).
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException ex) {
+        String message = ex.getConstraintViolations().stream()
+                .findFirst()
+                .map(violation -> violation.getMessage())
+                .orElse("요청 파라미터가 올바르지 않습니다.");
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(message));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

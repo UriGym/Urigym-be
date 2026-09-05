@@ -39,6 +39,7 @@ public interface GymRepository extends JpaRepository<Gym, UUID>, JpaSpecificatio
             FROM gyms g
             WHERE g.lat BETWEEN :minLat AND :maxLat
               AND g.lng BETWEEN :minLng AND :maxLng
+              AND g.owner_id IS NOT NULL
               AND (g.suspended_until IS NULL OR g.suspended_until <= :now)
               AND (
                 6371 * acos(LEAST(1.0, GREATEST(-1.0,

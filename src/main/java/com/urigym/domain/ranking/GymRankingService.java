@@ -31,12 +31,23 @@ public class GymRankingService {
     /** Reports needed to zero out the report component of a gym's score. */
     private static final double REPORT_SATURATION = 10.0;
 
+    /** Candidate radius when lat/lng is given — generous enough to rarely starve the ranking pool. */
+    private static final double CANDIDATE_RADIUS_KM = 50.0;
+
     private final GymService gymService;
     private final ReviewRepository reviewRepository;
     private final ReviewQualityScorer reviewQualityScorer;
 
     public List<RankedGym> getRankedGyms(int limit) {
-        List<Gym> gyms = gymService.getAllVisibleGyms();
+        return getRankedGyms(limit, null, null);
+    }
+
+    /** When {@code lat}/{@code lng} are given, scores only gyms within {@link #CANDIDATE_RADIUS_KM}
+     * of that point instead of every visible gym in the country. */
+    public List<RankedGym> getRankedGyms(int limit, Double lat, Double lng) {
+        List<Gym> gyms = (lat != null && lng != null)
+                ? gymService.getNearbyCandidates(lat, lng, CANDIDATE_RADIUS_KM)
+                : gymService.getAllVisibleGyms();
         if (gyms.isEmpty()) {
             return List.of();
         }
