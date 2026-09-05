@@ -5,12 +5,15 @@ import com.urigym.domain.gym.entity.GymResponse;
 import com.urigym.domain.ranking.GymRankingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.Max;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/gyms")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Gym", description = "체육관 API")
 public class GymController {
 
@@ -36,11 +40,15 @@ public class GymController {
     }
 
     @GetMapping("/ranked")
-    @Operation(summary = "AI 추천 랭킹 조회", description = "리뷰 품질, 인기도, 가격 경쟁력, 신고 이력을 종합해 상위 체육관을 반환합니다.")
+    @Operation(summary = "AI 추천 랭킹 조회",
+            description = "리뷰 품질, 인기도, 가격 경쟁력, 신고 이력을 종합해 상위 체육관을 반환합니다. " +
+                    "lat/lng을 주면 그 주변 체육관만 후보로 좁혀서 스코어링합니다.")
     public ResponseEntity<ApiResponse<List<GymResponse>>> getRankedGyms(
-            @RequestParam(defaultValue = "5") int limit
+            @RequestParam(defaultValue = "5") @Max(100) int limit,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng
     ) {
-        List<GymResponse> gyms = gymRankingService.getRankedGyms(limit)
+        List<GymResponse> gyms = gymRankingService.getRankedGyms(limit, lat, lng)
                 .stream()
                 .map(ranked -> GymResponse.ranked(ranked.gym(), ranked.score()))
                 .toList();
@@ -50,7 +58,7 @@ public class GymController {
     @GetMapping("/{id}")
     @Operation(summary = "체육관 상세 조회", description = "특정 체육관의 상세 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<GymResponse>> getGymById(@PathVariable UUID id) {
-        Gym gym = gymService.getGymById(id);
+        Gym gym = gymService.getVisibleGymById(id);
         return ResponseEntity.ok(ApiResponse.success(GymResponse.from(gym)));
     }
 
@@ -81,8 +89,8 @@ public class GymController {
     public ResponseEntity<ApiResponse<List<GymResponse>>> getNearbyGyms(
             @RequestParam Double lat,
             @RequestParam Double lng,
-            @RequestParam(defaultValue = "2") Double radiusKm,
-            @RequestParam(defaultValue = "100") int limit
+            @RequestParam(defaultValue = "2") @DecimalMax("50") Double radiusKm,
+            @RequestParam(defaultValue = "100") @Max(100) int limit
     ) {
         List<GymResponse> gyms = gymService.getNearbyGyms(lat, lng, radiusKm, limit)
                 .stream()
