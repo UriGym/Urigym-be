@@ -45,4 +45,13 @@ public final class GymSpecifications {
                 cb.between(root.get("lng"), minLng, maxLng)
         );
     }
+
+    /**
+     * Gym has an owner, i.e. it was registered by an owner (source=USER) rather than
+     * sitting unclaimed after a Kakao import. Public read APIs filter on this so the
+     * ~36k unclaimed Kakao rows never surface outside admin/import screens.
+     */
+    public static Specification<Gym> claimed() {
+        return (root, query, cb) -> cb.isNotNull(root.get("owner"));
+    }
 }

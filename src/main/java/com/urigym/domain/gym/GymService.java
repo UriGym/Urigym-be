@@ -24,11 +24,11 @@ public class GymService {
     private final GymRepository gymRepository;
 
     public Page<Gym> getAllGyms(Pageable pageable) {
-        return gymRepository.findAll(visible(), pageable);
+        return gymRepository.findAll(visible().and(claimed()), pageable);
     }
 
     public List<Gym> getAllVisibleGyms() {
-        return gymRepository.findAll(visible());
+        return gymRepository.findAll(visible().and(claimed()));
     }
 
     /** Admin view — includes gyms currently suspended from public listings. */
@@ -41,21 +41,67 @@ public class GymService {
                 .orElseThrow(() -> new ResourceNotFoundException("Gym not found with id: " + id));
     }
 
+    /**
+     * Public by-id lookup — 404s for unclaimed (owner=null) gyms too, so an unregistered
+     * Kakao-imported gym isn't reachable even if a caller already knows its id (e.g. from a
+     * map marker click, a shared URL, or id enumeration). Mirrors the {@link #claimed()}
+     * filter applied to the list/search/nearby endpoints; internal callers (reviews, reports,
+     * favorites, attendance, owner/admin management) keep using unfiltered {@link #getGymById}.
+     */
+    public Gym getVisibleGymById(UUID id) {
+        Gym gym = getGymById(id);
+        if (gym.getOwner() == null) {
+            throw new ResourceNotFoundException("Gym not found with id: " + id);
+        }
+        return gym;
+    }
+
     public Page<Gym> getGymsByCategory(String category, Pageable pageable) {
-        return gymRepository.findAll(visible().and(GymSpecifications.hasCategory(category)), pageable);
+        return gymRepository.findAll(visible().and(claimed()).and(GymSpecifications.hasCategory(category)), pageable);
     }
 
     public Page<Gym> searchGyms(String keyword, Pageable pageable) {
-        return gymRepository.findAll(visible().and(GymSpecifications.matchesKeyword(keyword)), pageable);
+        return gymRepository.findAll(visible().and(claimed()).and(GymSpecifications.matchesKeyword(keyword)), pageable);
     }
 
     public List<Gym> getGymsByLocation(Double minLat, Double maxLat, Double minLng, Double maxLng) {
         return gymRepository.findAll(
-                visible().and(GymSpecifications.withinBounds(minLat, maxLat, minLng, maxLng)));
+                visible().and(claimed()).and(GymSpecifications.withinBounds(minLat, maxLat, minLng, maxLng)));
+    }
+
+    private static final double KM_PER_DEGREE_LAT = 111.0;
+
+    /** Nearest-first gyms within {@code radiusKm} of (lat, lng). */
+    public List<Gym> getNearbyGyms(double lat, double lng, double radiusKm, int limit) {
+        double latDelta = radiusKm / KM_PER_DEGREE_LAT;
+        double lngDelta = radiusKm / (KM_PER_DEGREE_LAT * Math.cos(Math.toRadians(lat)));
+        return gymRepository.findNearby(
+                lat, lng, radiusKm,
+                lat - latDelta, lat + latDelta,
+                lng - lngDelta, lng + lngDelta,
+                LocalDateTime.now(), limit);
+    }
+
+    /**
+     * Bounding-box candidates within {@code radiusKm} of (lat, lng), unsorted — used by
+     * {@link com.urigym.domain.ranking.GymRankingService} to shrink the pool it scores
+     * instead of loading every visible/claimed gym. Reuses the same box math and
+     * {@link GymSpecifications#withinBounds}; exact distance sorting isn't needed here
+     * since the ranking score reorders the result anyway.
+     */
+    public List<Gym> getNearbyCandidates(double lat, double lng, double radiusKm) {
+        double latDelta = radiusKm / KM_PER_DEGREE_LAT;
+        double lngDelta = radiusKm / (KM_PER_DEGREE_LAT * Math.cos(Math.toRadians(lat)));
+        return gymRepository.findAll(visible().and(claimed()).and(
+                GymSpecifications.withinBounds(lat - latDelta, lat + latDelta, lng - lngDelta, lng + lngDelta)));
     }
 
     private Specification<Gym> visible() {
         return GymSpecifications.visible(LocalDateTime.now());
+    }
+
+    private Specification<Gym> claimed() {
+        return GymSpecifications.claimed();
     }
 
     public List<Gym> getGymsByOwner(UUID ownerId) {
@@ -107,6 +153,13 @@ public class GymService {
     }
 
     @Transactional
+    public void updateFavoriteCount(UUID gymId, long favoriteCount) {
+        Gym gym = getGymById(gymId);
+        gym.setFavoriteCount((int) favoriteCount);
+        gymRepository.save(gym);
+    }
+
+    @Transactional
     public void incrementReportCount(UUID gymId) {
         Gym gym = getGymById(gymId);
         gym.setReportCount(gym.getReportCount() + 1);
@@ -136,5 +189,37 @@ public class GymService {
             throw new AccessDeniedException("본인이 등록한 체육관만 관리할 수 있습니다.");
         }
         return gym;
+    }
+
+    /**
+     * Inserts a Kakao-sourced gym, unclaimed (no owner), unless one with the same
+     * {@code kakaoPlaceId} already exists. The unique constraint on that column is the
+     * real guard against duplicates — the findBy check just avoids a wasted round trip
+     * for the common case, since the import runs several cells concurrently.
+     *
+     * @return true if a new gym was created, false if it already existed
+     */
+    @Transactional
+    public boolean upsertFromKakao(String kakaoPlaceId, String name, String category, String address,
+                                    String phone, Double lat, Double lng) {
+        if (gymRepository.findByKakaoPlaceId(kakaoPlaceId).isPresent()) {
+            return false;
+        }
+        Gym gym = Gym.builder()
+                .name(name)
+                .category(category)
+                .address(address)
+                .phone(phone)
+                .lat(lat)
+                .lng(lng)
+                .source(GymSource.KAKAO)
+                .kakaoPlaceId(kakaoPlaceId)
+                .build();
+        try {
+            gymRepository.save(gym);
+            return true;
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            return false;
+        }
     }
 }
