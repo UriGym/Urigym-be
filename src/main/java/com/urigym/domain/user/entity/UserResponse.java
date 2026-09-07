@@ -1,5 +1,7 @@
 package com.urigym.domain.user.entity;
 
+import com.urigym.domain.oauth.OAuthProvider;
+import com.urigym.domain.oauth.UserOAuthAccount;
 import com.urigym.domain.user.AppRole;
 import com.urigym.domain.user.User;
 import lombok.AllArgsConstructor;
@@ -8,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -28,6 +31,8 @@ public class UserResponse {
     private Boolean notifyMessages;
     /** False for accounts created purely through social login — see UserOAuthAccount. */
     private Boolean hasPassword;
+    /** Linked social login providers, e.g. [KAKAO]. Empty for password-only accounts. */
+    private List<OAuthProvider> oauthProviders;
     private LocalDateTime createdAt;
 
     public static UserResponse from(User user) {
@@ -43,6 +48,7 @@ public class UserResponse {
                 .notifyAnnouncements(user.getNotifyAnnouncements())
                 .notifyMessages(user.getNotifyMessages())
                 .hasPassword(user.getPassword() != null)
+                .oauthProviders(user.getOauthAccounts().stream().map(UserOAuthAccount::getProvider).distinct().toList())
                 .createdAt(user.getCreatedAt())
                 .build();
     }
