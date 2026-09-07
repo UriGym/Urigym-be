@@ -48,8 +48,12 @@ public final class GymSpecifications {
 
     /**
      * Gym has an owner, i.e. it was registered by an owner (source=USER) rather than
-     * sitting unclaimed after a Kakao import. Public read APIs filter on this so the
-     * ~36k unclaimed Kakao rows never surface outside admin/import screens.
+     * sitting unclaimed after a Kakao import.
+     * <p>
+     * Currently unused: public read APIs used to filter on this so the ~36k unclaimed
+     * Kakao rows stayed hidden outside admin/import screens, but that policy was
+     * reverted (2026-09-07) — unclaimed gyms are visible everywhere except by owner
+     * region (Wolgot-dong), so hiding them left every other region with an empty app.
      */
     public static Specification<Gym> claimed() {
         return (root, query, cb) -> cb.isNotNull(root.get("owner"));

@@ -58,7 +58,7 @@ public class GymController {
     @GetMapping("/{id}")
     @Operation(summary = "체육관 상세 조회", description = "특정 체육관의 상세 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<GymResponse>> getGymById(@PathVariable UUID id) {
-        Gym gym = gymService.getVisibleGymById(id);
+        Gym gym = gymService.getGymById(id);
         return ResponseEntity.ok(ApiResponse.success(GymResponse.from(gym)));
     }
 
