@@ -65,7 +65,11 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    // EAGER, not LAZY: JwtAuthenticationFilter loads the principal in its own short-lived
+    // session before the request's OSIV session opens, so a lazy proxy here throws
+    // "no Session" the moment a controller touches it. Table is at most a couple of rows
+    // per user, so the extra per-load select is cheap.
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
     @Builder.Default
     private List<UserOAuthAccount> oauthAccounts = new ArrayList<>();
 }
