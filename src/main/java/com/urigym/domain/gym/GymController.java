@@ -42,13 +42,14 @@ public class GymController {
     @GetMapping("/ranked")
     @Operation(summary = "AI 추천 랭킹 조회",
             description = "리뷰 품질, 인기도, 가격 경쟁력, 신고 이력을 종합해 상위 체육관을 반환합니다. " +
-                    "lat/lng을 주면 그 주변 체육관만 후보로 좁혀서 스코어링합니다.")
+                    "lat/lng을 주면 그 주변 체육관만 후보로 좁혀서 스코어링하며, radiusKm으로 후보 반경을 지정할 수 있습니다(기본 50km).")
     public ResponseEntity<ApiResponse<List<GymResponse>>> getRankedGyms(
             @RequestParam(defaultValue = "5") @Max(100) int limit,
             @RequestParam(required = false) Double lat,
-            @RequestParam(required = false) Double lng
+            @RequestParam(required = false) Double lng,
+            @RequestParam(required = false) Double radiusKm
     ) {
-        List<GymResponse> gyms = gymRankingService.getRankedGyms(limit, lat, lng)
+        List<GymResponse> gyms = gymRankingService.getRankedGyms(limit, lat, lng, radiusKm)
                 .stream()
                 .map(ranked -> GymResponse.ranked(ranked.gym(), ranked.score()))
                 .toList();
