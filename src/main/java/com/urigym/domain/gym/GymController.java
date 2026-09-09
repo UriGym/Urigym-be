@@ -2,7 +2,11 @@ package com.urigym.domain.gym;
 
 import com.urigym.common.response.ApiResponse;
 import com.urigym.domain.gym.entity.GymResponse;
+import com.urigym.domain.member.GymMember;
+import com.urigym.domain.member.GymMemberService;
+import com.urigym.domain.member.entity.GymMemberResponse;
 import com.urigym.domain.ranking.GymRankingService;
+import com.urigym.domain.user.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.DecimalMax;
@@ -13,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +33,7 @@ public class GymController {
 
     private final GymService gymService;
     private final GymRankingService gymRankingService;
+    private final GymMemberService gymMemberService;
 
     @GetMapping
     @Operation(summary = "체육관 목록 조회", description = "전체 체육관 목록을 페이징하여 조회합니다.")
@@ -61,6 +67,17 @@ public class GymController {
     public ResponseEntity<ApiResponse<GymResponse>> getGymById(@PathVariable UUID id) {
         Gym gym = gymService.getGymById(id);
         return ResponseEntity.ok(ApiResponse.success(GymResponse.from(gym)));
+    }
+
+    @PostMapping("/{gymId}/join-requests")
+    @Operation(summary = "체육관 등록 신청", description = "무료로 체육관 등록을 신청합니다. 관장이 수락하면 출석 체크가 가능합니다.")
+    public ResponseEntity<ApiResponse<GymMemberResponse>> requestJoin(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID gymId
+    ) {
+        Gym gym = gymService.getGymById(gymId);
+        GymMember member = gymMemberService.requestJoin(gym, user);
+        return ResponseEntity.ok(ApiResponse.success("등록 신청이 접수되었습니다.", GymMemberResponse.from(member)));
     }
 
     @GetMapping("/category/{category}")
