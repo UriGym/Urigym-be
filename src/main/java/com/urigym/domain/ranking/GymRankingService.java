@@ -39,14 +39,14 @@ public class GymRankingService {
     private final ReviewQualityScorer reviewQualityScorer;
 
     public List<RankedGym> getRankedGyms(int limit) {
-        return getRankedGyms(limit, null, null);
+        return getRankedGyms(limit, null, null, null);
     }
 
-    /** When {@code lat}/{@code lng} are given, scores only gyms within {@link #CANDIDATE_RADIUS_KM}
-     * of that point instead of every visible gym in the country. */
-    public List<RankedGym> getRankedGyms(int limit, Double lat, Double lng) {
+    /** When {@code lat}/{@code lng} are given, scores only gyms within {@code radiusKm}
+     * (default {@link #CANDIDATE_RADIUS_KM}) of that point instead of every visible gym in the country. */
+    public List<RankedGym> getRankedGyms(int limit, Double lat, Double lng, Double radiusKm) {
         List<Gym> gyms = (lat != null && lng != null)
-                ? gymService.getNearbyCandidates(lat, lng, CANDIDATE_RADIUS_KM)
+                ? gymService.getNearbyCandidates(lat, lng, radiusKm != null ? radiusKm : CANDIDATE_RADIUS_KM)
                 : gymService.getAllVisibleGyms();
         if (gyms.isEmpty()) {
             return List.of();
