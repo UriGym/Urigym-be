@@ -209,6 +209,32 @@ public class OwnerController {
         return ResponseEntity.ok(ApiResponse.success("삭제되었습니다.", null));
     }
 
+    @PostMapping("/gyms/{gymId}/members/{memberId}/approve")
+    @Operation(summary = "등록 신청 승인", description = "대기중인 등록 신청을 승인하고 정식 관원(ACTIVE)으로 전환합니다.")
+    public ResponseEntity<ApiResponse<GymMemberResponse>> approveMember(
+            @AuthenticationPrincipal User owner,
+            @PathVariable UUID gymId,
+            @PathVariable UUID memberId
+    ) {
+        Gym gym = gymService.getOwnedGym(gymId, owner.getId());
+        return ResponseEntity.ok(ApiResponse.success(
+                "등록 신청을 승인했습니다.",
+                GymMemberResponse.from(gymMemberService.approveMember(memberId, gymId, gym))
+        ));
+    }
+
+    @PostMapping("/gyms/{gymId}/members/{memberId}/reject")
+    @Operation(summary = "등록 신청 거절", description = "대기중인 등록 신청을 거절합니다.")
+    public ResponseEntity<ApiResponse<Void>> rejectMember(
+            @AuthenticationPrincipal User owner,
+            @PathVariable UUID gymId,
+            @PathVariable UUID memberId
+    ) {
+        Gym gym = gymService.getOwnedGym(gymId, owner.getId());
+        gymMemberService.rejectMember(memberId, gymId, gym);
+        return ResponseEntity.ok(ApiResponse.success("등록 신청을 거절했습니다.", null));
+    }
+
     // --- Announcements ---
 
     @PostMapping("/gyms/{gymId}/announcements")

@@ -26,7 +26,7 @@ public class GymMemberController {
     @GetMapping("/my-gyms")
     @Operation(summary = "내가 등록된 체육관 목록", description = "출석 체크가 가능한, 본인이 등록된 체육관을 조회합니다.")
     public ResponseEntity<ApiResponse<List<GymResponse>>> getMyGyms(@AuthenticationPrincipal User user) {
-        List<GymResponse> gyms = gymMemberRepository.findByUserId(user.getId()).stream()
+        List<GymResponse> gyms = gymMemberRepository.findByUserIdAndStatus(user.getId(), "ACTIVE").stream()
                 .map(member -> GymResponse.from(member.getGym()))
                 .toList();
         return ResponseEntity.ok(ApiResponse.success(gyms));
