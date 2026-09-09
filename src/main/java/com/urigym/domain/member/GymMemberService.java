@@ -9,6 +9,8 @@ import com.urigym.domain.gym.entity.GymResponse;
 import com.urigym.domain.member.entity.GymMemberRequest;
 import com.urigym.domain.member.entity.GymMemberResponse;
 import com.urigym.domain.member.entity.MyMembershipResponse;
+import com.urigym.domain.notification.NotificationService;
+import com.urigym.domain.notification.NotificationType;
 import com.urigym.domain.user.User;
 import com.urigym.domain.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,7 @@ public class GymMemberService {
     private final GymMemberRepository gymMemberRepository;
     private final AttendanceRepository attendanceRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
 
     public List<GymMemberResponse> getMembersWithStats(UUID gymId) {
         Map<UUID, LocalDateTime> lastCheckIns = new HashMap<>();
@@ -136,6 +139,69 @@ public class GymMemberService {
 
         gym.setMemberCount((int) gymMemberRepository.countByGymId(gym.getId()));
         return member;
+    }
+
+    /** Free join request: creates a PENDING member row and notifies the gym's owner. */
+    @Transactional
+    public GymMember requestJoin(Gym gym, User user) {
+        if (gym.getOwner() == null) {
+            throw new IllegalArgumentException("관장이 지정되지 않은 체육관은 등록 신청할 수 없습니다.");
+        }
+        gymMemberRepository.findByGymIdAndUserId(gym.getId(), user.getId()).ifPresent(existing -> {
+            throw new DuplicateResourceException(
+                    "PENDING".equals(existing.getStatus()) ? "이미 등록 신청한 체육관입니다." : "이미 등록된 관원입니다.");
+        });
+
+        GymMember member = gymMemberRepository.save(GymMember.builder()
+                .gym(gym)
+                .user(user)
+                .status("PENDING")
+                .build());
+
+        notificationService.notify(
+                gym.getOwner(),
+                NotificationType.SYSTEM,
+                "새 등록 신청이 있습니다.",
+                user.getFullName() + "님이 " + gym.getName() + " 등록을 신청했습니다.",
+                gym.getId()
+        );
+
+        return member;
+    }
+
+    /** Approves a PENDING join request: PENDING → ACTIVE, notifies the requesting user. */
+    @Transactional
+    public GymMember approveMember(UUID memberId, UUID gymId, Gym gym) {
+        GymMember member = getMemberOfGym(memberId, gymId);
+        member.setStatus("ACTIVE");
+        gymMemberRepository.save(member);
+
+        notificationService.notify(
+                member.getUser(),
+                NotificationType.SYSTEM,
+                "등록 신청이 승인되었습니다.",
+                gym.getName() + " 등록이 승인되었습니다. 이제 출석 체크가 가능합니다.",
+                gym.getId()
+        );
+
+        return member;
+    }
+
+    /** Rejects a join request: deletes the row, notifies the requesting user. */
+    @Transactional
+    public void rejectMember(UUID memberId, UUID gymId, Gym gym) {
+        GymMember member = getMemberOfGym(memberId, gymId);
+        User user = member.getUser();
+        gymMemberRepository.delete(member);
+        gym.setMemberCount((int) gymMemberRepository.countByGymId(gymId));
+
+        notificationService.notify(
+                user,
+                NotificationType.SYSTEM,
+                "등록 신청이 거절되었습니다.",
+                gym.getName() + " 등록 신청이 거절되었습니다.",
+                gym.getId()
+        );
     }
 
     @Transactional

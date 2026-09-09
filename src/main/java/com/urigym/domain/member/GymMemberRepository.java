@@ -26,6 +26,10 @@ public interface GymMemberRepository extends JpaRepository<GymMember, UUID> {
 
     boolean existsByGymIdAndUserId(UUID gymId, UUID userId);
 
+    boolean existsByGymIdAndUserIdAndStatus(UUID gymId, UUID userId, String status);
+
+    List<GymMember> findByUserIdAndStatus(UUID userId, String status);
+
     long countByGymIdAndStatus(UUID gymId, String status);
 
     long countByGymId(UUID gymId);

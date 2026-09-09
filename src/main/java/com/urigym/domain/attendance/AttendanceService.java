@@ -50,7 +50,7 @@ public class AttendanceService {
     public Attendance checkIn(UUID gymId, User user, CheckInMethod method, String phoneNumber) {
         Gym gym = gymService.getGymById(gymId);
 
-        if (!gymMemberRepository.existsByGymIdAndUserId(gymId, user.getId())) {
+        if (!gymMemberRepository.existsByGymIdAndUserIdAndStatus(gymId, user.getId(), "ACTIVE")) {
             throw new IllegalArgumentException("해당 체육관의 관원이 아닙니다.");
         }
 
