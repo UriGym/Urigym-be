@@ -114,7 +114,7 @@ public class GymMemberService {
 
         Gym gym = member.getGym();
         gymMemberRepository.delete(member);
-        gym.setMemberCount((int) gymMemberRepository.countByGymId(gym.getId()));
+        gym.setMemberCount((int) gymMemberRepository.countByGymIdAndStatus(gym.getId(), "ACTIVE"));
     }
 
     public GymMember getMemberById(UUID id) {
@@ -130,15 +130,75 @@ public class GymMemberService {
             throw new DuplicateResourceException("이미 등록된 관원입니다.");
         }
 
+        // status는 항상 INVITED로 고정한다: 클라이언트가 보낸 값을 신뢰하면 owner가 API를
+        // 직접 호출해 "ACTIVE"를 보내는 것으로 유저 동의(수락) 절차를 우회할 수 있다.
         GymMember member = gymMemberRepository.save(GymMember.builder()
                 .gym(gym)
                 .user(user)
-                .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
+                .status("INVITED")
                 .expiresAt(request.getExpiresAt())
                 .build());
 
-        gym.setMemberCount((int) gymMemberRepository.countByGymId(gym.getId()));
+        notificationService.notify(
+                user,
+                NotificationType.SYSTEM,
+                "체육관 등록 초대가 도착했습니다.",
+                gym.getName() + "에서 회원 등록을 초대했습니다. 마이페이지에서 수락하면 등록됩니다.",
+                gym.getId()
+        );
+
         return member;
+    }
+
+    /** Accepts a gym-initiated invite: INVITED -> ACTIVE, notifies the owner. */
+    @Transactional
+    public void acceptInvite(UUID memberId, UUID userId) {
+        GymMember member = getMemberById(memberId);
+        if (!member.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("본인의 초대만 수락할 수 있습니다.");
+        }
+        if (!"INVITED".equals(member.getStatus())) {
+            throw new IllegalArgumentException("수락할 수 있는 초대 상태가 아닙니다.");
+        }
+
+        member.setStatus("ACTIVE");
+        gymMemberRepository.save(member);
+
+        Gym gym = member.getGym();
+        gym.setMemberCount((int) gymMemberRepository.countByGymIdAndStatus(gym.getId(), "ACTIVE"));
+
+        notificationService.notify(
+                gym.getOwner(),
+                NotificationType.SYSTEM,
+                "초대를 수락했습니다.",
+                member.getUser().getFullName() + "님이 초대를 수락했습니다.",
+                gym.getId()
+        );
+    }
+
+    /** Declines a gym-initiated invite: deletes the row, notifies the owner. */
+    @Transactional
+    public void declineInvite(UUID memberId, UUID userId) {
+        GymMember member = getMemberById(memberId);
+        if (!member.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("본인의 초대만 거절할 수 있습니다.");
+        }
+        if (!"INVITED".equals(member.getStatus())) {
+            throw new IllegalArgumentException("거절할 수 있는 초대 상태가 아닙니다.");
+        }
+
+        Gym gym = member.getGym();
+        User user = member.getUser();
+        gymMemberRepository.delete(member);
+        gym.setMemberCount((int) gymMemberRepository.countByGymIdAndStatus(gym.getId(), "ACTIVE"));
+
+        notificationService.notify(
+                gym.getOwner(),
+                NotificationType.SYSTEM,
+                "초대를 거절했습니다.",
+                user.getFullName() + "님이 초대를 거절했습니다.",
+                gym.getId()
+        );
     }
 
     /** Free join request: creates a PENDING member row and notifies the gym's owner. */
@@ -174,6 +234,7 @@ public class GymMemberService {
     public GymMember approveMember(UUID memberId, UUID gymId, Gym gym) {
         GymMember member = getMemberOfGym(memberId, gymId);
         member.setStatus("ACTIVE");
+        gym.setMemberCount((int) gymMemberRepository.countByGymIdAndStatus(gymId, "ACTIVE"));
         gymMemberRepository.save(member);
 
         notificationService.notify(
@@ -193,7 +254,7 @@ public class GymMemberService {
         GymMember member = getMemberOfGym(memberId, gymId);
         User user = member.getUser();
         gymMemberRepository.delete(member);
-        gym.setMemberCount((int) gymMemberRepository.countByGymId(gymId));
+        gym.setMemberCount((int) gymMemberRepository.countByGymIdAndStatus(gymId, "ACTIVE"));
 
         notificationService.notify(
                 user,
@@ -217,7 +278,7 @@ public class GymMemberService {
     @Transactional
     public void removeMember(UUID memberId, UUID gymId, Gym gym) {
         gymMemberRepository.delete(getMemberOfGym(memberId, gymId));
-        gym.setMemberCount((int) gymMemberRepository.countByGymId(gymId));
+        gym.setMemberCount((int) gymMemberRepository.countByGymIdAndStatus(gymId, "ACTIVE"));
     }
 
     private GymMember getMemberOfGym(UUID memberId, UUID gymId) {
