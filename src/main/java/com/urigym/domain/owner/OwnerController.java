@@ -374,7 +374,7 @@ public class OwnerController {
     ) {
         Gym gym = gymService.getOwnedGym(gymId, owner.getId());
         return ResponseEntity.ok(ApiResponse.success(new OwnerGymStats(
-                gymMemberService.getMembersWithStats(gymId).size(),
+                gym.getMemberCount(),
                 attendanceService.countTodayAttendances(gymId),
                 gym.getRating(),
                 gymMemberService.getAbsentMembers(gymId, absentDays).size()

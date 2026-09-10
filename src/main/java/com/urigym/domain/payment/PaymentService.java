@@ -94,6 +94,6 @@ public class PaymentService {
         }
 
         gymMemberRepository.save(GymMember.builder().gym(gym).user(user).build());
-        gym.setMemberCount((int) gymMemberRepository.countByGymId(gym.getId()));
+        gym.setMemberCount((int) gymMemberRepository.countByGymIdAndStatus(gym.getId(), "ACTIVE"));
     }
 }

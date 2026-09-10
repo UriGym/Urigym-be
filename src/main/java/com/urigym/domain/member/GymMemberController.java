@@ -49,4 +49,24 @@ public class GymMemberController {
         gymMemberService.cancelOwnMembership(membershipId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("회원권이 해지되었습니다.", null));
     }
+
+    @PostMapping("/{membershipId}/accept")
+    @Operation(summary = "관장 초대 수락", description = "관장이 등록한 초대를 수락하여 회원권을 활성화합니다.")
+    public ResponseEntity<ApiResponse<Void>> acceptInvite(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID membershipId
+    ) {
+        gymMemberService.acceptInvite(membershipId, user.getId());
+        return ResponseEntity.ok(ApiResponse.success("초대를 수락했습니다.", null));
+    }
+
+    @PostMapping("/{membershipId}/decline")
+    @Operation(summary = "관장 초대 거절", description = "관장이 등록한 초대를 거절합니다.")
+    public ResponseEntity<ApiResponse<Void>> declineInvite(
+            @AuthenticationPrincipal User user,
+            @PathVariable UUID membershipId
+    ) {
+        gymMemberService.declineInvite(membershipId, user.getId());
+        return ResponseEntity.ok(ApiResponse.success("초대를 거절했습니다.", null));
+    }
 }
