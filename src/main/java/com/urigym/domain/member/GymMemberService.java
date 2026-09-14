@@ -53,11 +53,16 @@ public class GymMemberService {
                 .toList();
     }
 
-    /** Members who have not checked in for at least {@code days}, never-attended included. */
+    /**
+     * Members who have not checked in for at least {@code days}, never-attended included.
+     * Restricted to ACTIVE members — INVITED/PENDING members haven't joined yet and
+     * shouldn't show up as "absent".
+     */
     public List<GymMemberResponse> getAbsentMembers(UUID gymId, int days) {
         LocalDateTime threshold = LocalDateTime.now().minusDays(days);
 
         return getMembersWithStats(gymId).stream()
+                .filter(member -> "ACTIVE".equals(member.getStatus()))
                 .filter(member -> member.getLastCheckInTime() == null
                         || member.getLastCheckInTime().isBefore(threshold))
                 .sorted(Comparator.comparing(
@@ -71,8 +76,9 @@ public class GymMemberService {
         return gymMemberRepository.findByIdIn(ids);
     }
 
-    public List<GymMember> getMembers(UUID gymId) {
-        return gymMemberRepository.findByGymId(gymId);
+    /** ACTIVE members of a gym — the audience for announcements and group messages. */
+    public List<GymMember> getActiveMembers(UUID gymId) {
+        return gymMemberRepository.findByGymIdAndStatus(gymId, "ACTIVE");
     }
 
     /**
