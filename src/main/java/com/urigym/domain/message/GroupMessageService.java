@@ -56,7 +56,7 @@ public class GroupMessageService {
 
     private List<User> resolveRecipients(UUID gymId, GroupMessageRequest request) {
         if (request.getTargetType() == MessageTarget.ALL) {
-            return gymMemberService.getMembers(gymId).stream().map(GymMember::getUser).toList();
+            return gymMemberService.getActiveMembers(gymId).stream().map(GymMember::getUser).toList();
         }
 
         if (request.getMemberIds() == null || request.getMemberIds().isEmpty()) {
@@ -65,6 +65,7 @@ public class GroupMessageService {
 
         return gymMemberService.getMembersByIds(request.getMemberIds()).stream()
                 .filter(member -> member.getGym().getId().equals(gymId))
+                .filter(member -> "ACTIVE".equals(member.getStatus()))
                 .map(GymMember::getUser)
                 .toList();
     }

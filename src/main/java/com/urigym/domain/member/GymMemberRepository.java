@@ -18,6 +18,8 @@ public interface GymMemberRepository extends JpaRepository<GymMember, UUID> {
 
     List<GymMember> findByGymId(UUID gymId);
 
+    List<GymMember> findByGymIdAndStatus(UUID gymId, String status);
+
     Page<GymMember> findByUserId(UUID userId, Pageable pageable);
 
     List<GymMember> findByUserId(UUID userId);
