@@ -42,7 +42,7 @@ public class AnnouncementService {
                 .build());
 
         notificationService.notifyAll(
-                gymMemberService.getMembers(gym.getId()).stream().map(GymMember::getUser).toList(),
+                gymMemberService.getActiveMembers(gym.getId()).stream().map(GymMember::getUser).toList(),
                 NotificationType.ANNOUNCEMENT,
                 "[" + gym.getName() + "] " + title,
                 content,
