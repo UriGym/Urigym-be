@@ -21,6 +21,7 @@ public class NotificationResponse {
     private String title;
     private String body;
     private UUID relatedGymId;
+    private UUID relatedRoomId;
     private Boolean isRead;
     private LocalDateTime createdAt;
 
@@ -31,6 +32,7 @@ public class NotificationResponse {
                 .title(notification.getTitle())
                 .body(notification.getBody())
                 .relatedGymId(notification.getRelatedGymId())
+                .relatedRoomId(notification.getRelatedRoomId())
                 .isRead(notification.getIsRead())
                 .createdAt(notification.getCreatedAt())
                 .build();
