@@ -44,6 +44,11 @@ public class NotificationService {
      *  ANNOUNCEMENT and MESSAGE respect the recipient's notification settings. */
     @Transactional
     public void notify(User user, NotificationType type, String title, String body, UUID relatedGymId) {
+        notify(user, type, title, body, relatedGymId, null);
+    }
+
+    @Transactional
+    public void notify(User user, NotificationType type, String title, String body, UUID relatedGymId, UUID relatedRoomId) {
         if (!wantsNotification(user, type)) {
             return;
         }
@@ -53,6 +58,7 @@ public class NotificationService {
                 .title(title)
                 .body(body)
                 .relatedGymId(relatedGymId)
+                .relatedRoomId(relatedRoomId)
                 .build());
     }
 
