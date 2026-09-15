@@ -38,6 +38,9 @@ public class Notification {
     @Column(name = "related_gym_id")
     private UUID relatedGymId;
 
+    @Column(name = "related_room_id")
+    private UUID relatedRoomId;
+
     @Column(name = "is_read")
     @Builder.Default
     private Boolean isRead = false;

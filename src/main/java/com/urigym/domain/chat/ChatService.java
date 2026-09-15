@@ -117,7 +117,7 @@ public class ChatService {
         String title = senderIsInquirer
                 ? "[" + room.getGym().getName() + "] 문의자로부터 새 메시지가 도착했습니다."
                 : "[" + room.getGym().getName() + "] 관장님으로부터 답변이 도착했습니다.";
-        notificationService.notify(recipient, NotificationType.MESSAGE, title, content, room.getGym().getId());
+        notificationService.notify(recipient, NotificationType.MESSAGE, title, content, room.getGym().getId(), room.getId());
 
         return message;
     }
