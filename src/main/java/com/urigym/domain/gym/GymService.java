@@ -85,8 +85,8 @@ public class GymService {
         return GymSpecifications.visible(LocalDateTime.now());
     }
 
-    public List<Gym> getGymsByOwner(UUID ownerId) {
-        return gymRepository.findByOwnerId(ownerId);
+    public Page<Gym> getGymsByOwner(UUID ownerId, Pageable pageable) {
+        return gymRepository.findByOwnerIdOrderByCreatedAtDescIdAsc(ownerId, pageable);
     }
 
     @Transactional
