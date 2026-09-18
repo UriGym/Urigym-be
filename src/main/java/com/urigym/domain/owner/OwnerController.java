@@ -63,12 +63,14 @@ public class OwnerController {
     // --- Gyms ---
 
     @GetMapping("/gyms")
-    @Operation(summary = "내 체육관 목록", description = "관장이 등록한 모든 체육관을 조회합니다.")
-    public ResponseEntity<ApiResponse<List<GymResponse>>> getMyGyms(@AuthenticationPrincipal User owner) {
-        List<GymResponse> gyms = gymService.getGymsByOwner(owner.getId()).stream()
-                .map(GymResponse::from)
-                .toList();
-        return ResponseEntity.ok(ApiResponse.success(gyms));
+    @Operation(summary = "내 체육관 목록", description = "관장이 등록한 체육관을 페이지 단위로 조회합니다.")
+    public ResponseEntity<ApiResponse<Page<GymResponse>>> getMyGyms(
+            @AuthenticationPrincipal User owner,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                gymService.getGymsByOwner(owner.getId(), pageable).map(GymResponse::from)
+        ));
     }
 
     @PostMapping("/gyms")

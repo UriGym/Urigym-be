@@ -1,5 +1,7 @@
 package com.urigym.domain.gym;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -19,7 +21,7 @@ import java.util.UUID;
 @Repository
 public interface GymRepository extends JpaRepository<Gym, UUID>, JpaSpecificationExecutor<Gym> {
 
-    List<Gym> findByOwnerId(UUID ownerId);
+    Page<Gym> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId, Pageable pageable);
 
     Optional<Gym> findByKakaoPlaceId(String kakaoPlaceId);
 
