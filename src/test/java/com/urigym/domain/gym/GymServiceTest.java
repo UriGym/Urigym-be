@@ -29,12 +29,12 @@ class GymServiceTest {
         Pageable pageable = PageRequest.of(0, 20);
         Gym gym = Gym.builder().id(UUID.randomUUID()).name("우리짐").build();
         Page<Gym> repoPage = new PageImpl<>(List.of(gym), pageable, 1);
-        when(gymRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId, pageable)).thenReturn(repoPage);
+        when(gymRepository.findByOwnerIdOrderByCreatedAtDescIdAsc(ownerId, pageable)).thenReturn(repoPage);
 
         Page<Gym> result = gymService.getGymsByOwner(ownerId, pageable);
 
         assertThat(result.getContent()).containsExactly(gym);
         assertThat(result.getTotalElements()).isEqualTo(1);
-        verify(gymRepository).findByOwnerIdOrderByCreatedAtDesc(ownerId, pageable);
+        verify(gymRepository).findByOwnerIdOrderByCreatedAtDescIdAsc(ownerId, pageable);
     }
 }

@@ -86,7 +86,7 @@ public class GymService {
     }
 
     public Page<Gym> getGymsByOwner(UUID ownerId, Pageable pageable) {
-        return gymRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId, pageable);
+        return gymRepository.findByOwnerIdOrderByCreatedAtDescIdAsc(ownerId, pageable);
     }
 
     @Transactional

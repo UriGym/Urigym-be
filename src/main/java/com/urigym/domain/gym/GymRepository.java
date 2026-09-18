@@ -21,7 +21,10 @@ import java.util.UUID;
 @Repository
 public interface GymRepository extends JpaRepository<Gym, UUID>, JpaSpecificationExecutor<Gym> {
 
-    Page<Gym> findByOwnerIdOrderByCreatedAtDesc(UUID ownerId, Pageable pageable);
+    // id as a second sort key: createdAt alone isn't unique when rows are batch-inserted
+    // in the same millisecond, so LIMIT/OFFSET paging without a tie-breaker can skip or
+    // repeat rows across pages.
+    Page<Gym> findByOwnerIdOrderByCreatedAtDescIdAsc(UUID ownerId, Pageable pageable);
 
     Optional<Gym> findByKakaoPlaceId(String kakaoPlaceId);
 
